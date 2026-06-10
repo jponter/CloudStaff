@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CloudStaff.DataContext/CloudStaff.DataContext.csproj" />
+  <Project Path="CloudStaff.EntityModels/CloudStaff.EntityModels.csproj" />
+  <Project Path="CloudStaff.MVC/CloudStaff.MVC.csproj" />
+</Solution>
