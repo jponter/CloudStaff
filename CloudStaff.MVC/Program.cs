@@ -1,7 +1,21 @@
+using CloudStaff.DataContext;
+using CloudStaff.MVC.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure the database context
+builder.Services.AddDbContext<CloudStaffContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Configure Razor view engine to support feature folders
+builder.Services.Configure<RazorViewEngineOptions>(o =>
+    o.ViewLocationExpanders.Add(new FeatureFolderViewExpander()));
 
 var app = builder.Build();
 
