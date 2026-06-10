@@ -8,8 +8,11 @@ namespace CloudStaff.EntityModels
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string AsNumber { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
 
-        public ICollection<Staff> Staff { get; set; } = new List<Staff>();
+        public ICollection<Staff> Staff { get; set; } = [];
 
     }
 }

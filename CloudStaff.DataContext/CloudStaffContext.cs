@@ -20,6 +20,10 @@ public class CloudStaffContext : DbContext
             e.ToTable("managers");
             e.HasKey(m => m.Id);
             e.Property(m => m.Name).IsRequired().HasMaxLength(200);
+            e.Property(m => m.AsNumber).IsRequired().HasMaxLength(20);
+            e.HasIndex(m => m.AsNumber).IsUnique();
+            e.Property(m => m.Location).IsRequired().HasMaxLength(200);
+            e.Property(m => m.Email).IsRequired().HasMaxLength(200);
             e.HasMany(m => m.Staff)
              .WithOne(s => s.Manager)
              .HasForeignKey(s => s.ManagerId)

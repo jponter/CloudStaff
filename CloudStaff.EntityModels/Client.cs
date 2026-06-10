@@ -10,7 +10,7 @@ namespace CloudStaff.EntityModels
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public ClientType Type { get; set; } = ClientType.External;
-        public ICollection<ClientProject> Projects { get; set; } = new List<ClientProject>();
+        public ICollection<ClientProject> Projects { get; set; } = [];
 
 
 
