@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudStaff.DataContext.Migrations
 {
     [DbContext(typeof(CloudStaffContext))]
-    [Migration("20260610155243_addManagerFields")]
+    [Migration("20260610155949_addManagerFields")]
     partial class addManagerFields
     {
         /// <inheritdoc />
@@ -86,12 +86,30 @@ namespace CloudStaff.DataContext.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AsNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AsNumber")
+                        .IsUnique();
 
                     b.ToTable("managers", (string)null);
                 });
