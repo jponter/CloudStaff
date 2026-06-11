@@ -1,0 +1,204 @@
+@model CloudStaff.MVC.Features.Clients.ClientViewModel
+@using CloudStaff.EntityModels
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+@* AG Grid CSS — placed in view body; renders fine in all modern browsers *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-alpine.css" />
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Clients</a></li>
+        <li class="breadcrumb-item active">@Model.Name</li>
+    </ol>
+</nav>
+
+@* ── Client header ─────────────────────────────────────────────── *@
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h1 class="h4 mb-0">@Model.Name</h1>
+                    <span class="badge @(Model.Type == ClientType.Internal ? "bg-secondary" : "bg-primary")">
+                        @Model.Type
+                    </span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="text-muted mb-0">@Model.Description</p>
+                }
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Projects section ──────────────────────────────────────────── *@
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="h5 mb-0">
+        Projects
+        <span class="badge bg-secondary ms-1" id="projectCount">@Model.ProjectCount</span>
+    </h2>
+    <div class="d-flex align-items-center gap-3">
+        <span id="saveStatus" class="small"></span>
+        <button id="btnAddProject" class="btn btn-sm btn-primary">+ Add Project</button>
+    </div>
+</div>
+
+<div id="projectGrid" class="ag-theme-alpine w-100 mb-4"></div>
+
+<input type="hidden" id="client-id" value="@Model.Id" />
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
+<script>
+(function () {
+    const clientId = parseInt(document.getElementById('client-id').value, 10);
+    const statusEl = document.getElementById('saveStatus');
+    const countEl  = document.getElementById('projectCount');
+    const addBtn   = document.getElementById('btnAddProject');
+
+    // ── guard: show error if AG Grid script didn't load ───────────
+    if (typeof agGrid === 'undefined') {
+        statusEl.textContent = 'AG Grid failed to load from CDN — projects unavailable.';
+        statusEl.className = 'small text-danger';
+        addBtn.disabled = true;
+        return;
+    }
+
+    // ── helpers ───────────────────────────────────────────────────
+
+    function setStatus(msg, isError) {
+        statusEl.textContent = msg;
+        statusEl.className = 'small ' + (isError ? 'text-danger' : 'text-success');
+        if (!isError) setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    }
+
+    async function post(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body !== undefined ? JSON.stringify(body) : undefined
+        });
+    }
+
+    function refreshCount(api) {
+        let n = 0;
+        api.forEachNode(() => n++);
+        countEl.textContent = n;
+    }
+
+    // ── grid definition ───────────────────────────────────────────
+
+    const gridOptions = {
+        columnDefs: [
+            {
+                field: 'name',
+                headerName: 'Project Name',
+                editable: true,
+                flex: 1,
+                minWidth: 220,
+                cellStyle: { cursor: 'text' }
+            },
+            {
+                field: 'description',
+                headerName: 'Description',
+                editable: true,
+                flex: 2,
+                minWidth: 320,
+                cellStyle: { cursor: 'text' },
+                cellEditor: 'agLargeTextCellEditor',
+                cellEditorPopup: true,
+                cellEditorParams: { maxLength: 1000, rows: 4, cols: 50 }
+            },
+            {
+                headerName: '',
+                width: 90,
+                sortable: false,
+                filter: false,
+                editable: false,
+                resizable: false,
+                cellRenderer: (params) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Delete';
+                    btn.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+                    btn.addEventListener('click', () => confirmDelete(params));
+                    return btn;
+                }
+            }
+        ],
+        defaultColDef: { sortable: true, filter: true, resizable: true },
+        rowData: [],
+        domLayout: 'autoHeight',
+        singleClickEdit: true,
+        stopEditingWhenCellsLoseFocus: true,
+        onCellValueChanged: async (e) => {
+            if (!e.data.id) return;
+            setStatus('Saving…');
+            const resp = await post('/Clients/UpdateProject', {
+                id: e.data.id,
+                clientId,
+                name: e.data.name || '',
+                description: e.data.description || ''
+            });
+            resp.ok ? setStatus('Saved') : setStatus('Error saving', true);
+        }
+    };
+
+    const gridApi = agGrid.createGrid(document.getElementById('projectGrid'), gridOptions);
+
+    // ── load initial rows ─────────────────────────────────────────
+
+    fetch(`/Clients/ProjectsJson/${clientId}`)
+        .then(r => r.json())
+        .then(rows => {
+            gridApi.setGridOption('rowData', rows);
+            countEl.textContent = rows.length;
+        })
+        .catch(() => setStatus('Failed to load projects', true));
+
+    // ── add project ───────────────────────────────────────────────
+
+    addBtn.addEventListener('click', async () => {
+        addBtn.disabled = true;
+        try {
+            const resp = await post('/Clients/AddProject', {
+                clientId,
+                name: 'New Project',
+                description: ''
+            });
+
+            if (!resp.ok) { setStatus('Error creating project — server returned ' + resp.status, true); return; }
+
+            const row = await resp.json();
+            gridApi.applyTransaction({ add: [row], addIndex: 0 });
+            refreshCount(gridApi);
+            setTimeout(() => gridApi.startEditingCell({ rowIndex: 0, colKey: 'name' }), 50);
+        } catch (err) {
+            setStatus('Error: ' + err.message, true);
+        } finally {
+            addBtn.disabled = false;
+        }
+    });
+
+    // ── delete project ────────────────────────────────────────────
+
+    async function confirmDelete(params) {
+        if (!confirm(`Delete "${params.data.name || 'this project'}"?`)) return;
+        const resp = await post(`/Clients/DeleteProject/${params.data.id}`);
+        if (resp.ok) {
+            params.api.applyTransaction({ remove: [params.data] });
+            refreshCount(params.api);
+        } else {
+            setStatus('Error deleting project', true);
+        }
+    }
+}());
+</script>
+}

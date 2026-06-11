@@ -1,0 +1,174 @@
+@{
+    ViewData["Title"] = "Seed Data";
+
+    string? platformsResult    = TempData["Platforms_Result"]  as string ?? TempData["Platforms_Error"]  as string;
+    string? categoriesResult   = TempData["Categories_Result"] as string ?? TempData["Categories_Error"] as string;
+    string? homePoolsResult    = TempData["HomePools_Result"]  as string ?? TempData["HomePools_Error"]  as string;
+    string? rolesResult        = TempData["Roles_Result"]      as string ?? TempData["Roles_Error"]      as string;
+    string? staffResult        = TempData["Staff_Result"]      as string ?? TempData["Staff_Error"]      as string;
+
+    bool IsError(string? s) => s != null && s.Contains("error", StringComparison.OrdinalIgnoreCase);
+}
+
+<h1 class="h3 mb-1">Seed / Import Data</h1>
+<p class="text-muted mb-4">Upload CSVs to populate lookup tables and staff records. Import in order: Categories → Home Pools → Roles → Staff.</p>
+
+@if (platformsResult != null)
+{
+    <div class="alert @(IsError(platformsResult) ? "alert-warning" : "alert-success") alert-dismissible fade show" role="alert">
+        @platformsResult
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (categoriesResult != null)
+{
+    <div class="alert @(IsError(categoriesResult) ? "alert-warning" : "alert-success") alert-dismissible fade show" role="alert">
+        @categoriesResult
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (homePoolsResult != null)
+{
+    <div class="alert @(IsError(homePoolsResult) ? "alert-warning" : "alert-success") alert-dismissible fade show" role="alert">
+        @homePoolsResult
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (rolesResult != null)
+{
+    <div class="alert @(IsError(rolesResult) ? "alert-warning" : "alert-success") alert-dismissible fade show" role="alert">
+        @rolesResult
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (staffResult != null)
+{
+    <div class="alert @(IsError(staffResult) ? "alert-warning" : "alert-success") alert-dismissible fade show" role="alert">
+        @staffResult
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-4">
+
+    @* 1. Platforms *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">1. Platforms</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">One column: <code>Name</code></p>
+                <pre class="bg-light p-2 rounded small">Name
+AWS
+Azure
+GCP
+Multi-Cloud
+Dynamics
+VMWare
+Wintel
+Linux/Unix</pre>
+                <form asp-action="SeedPlatforms" method="post" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* 2. Staff Categories *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">2. Staff Categories</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">One column: <code>Name</code></p>
+                <pre class="bg-light p-2 rounded small">Name
+Strategy &amp; Architecture
+Development &amp; Implementation
+Delivery &amp; Operations
+Cross-Cutting</pre>
+                <form asp-action="SeedStaffCategories" method="post" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* 3. Home Pools *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">3. Home Pools</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    Three columns: <code>Code, Name, Category</code><br />
+                    Category must match an imported Staff Category name exactly.
+                </p>
+                <pre class="bg-light p-2 rounded small">Code,Name,Category
+SA-01,Solution Architecture,Strategy &amp; Architecture
+SA-02,Enterprise Architecture,Strategy &amp; Architecture
+DE-01,Software Engineering,Development &amp; Implementation</pre>
+                <form asp-action="SeedHomePools" method="post" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* 4. Staff Roles *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">4. Staff Roles</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    Two columns: <code>Title, HomePoolCode</code><br />
+                    HomePoolCode must match an imported Home Pool code exactly.
+                    The same title can appear under multiple pools.
+                </p>
+                <pre class="bg-light p-2 rounded small">Title,HomePoolCode
+Solution Architect,SA-01
+Enterprise Architect,SA-02
+Integration Architect,SA-01
+Senior Software Engineer,DE-01</pre>
+                <form asp-action="SeedStaffRoles" method="post" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* 5. Staff *@
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header fw-semibold">5. Staff</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    Eleven columns: <code>Name, AsNumber, ManagerName, HomePoolCode, RoleTitle, GcmLevel, SfiaLevel, ContractJobTitle, PrimaryPlatform, SecondaryPlatform, TertiaryPlatform</code><br />
+                    Columns 4–11 are all optional — leave blank but keep the comma.<br />
+                    Platform names must exactly match an imported Platform (e.g. <code>AWS</code>, <code>Azure</code>). Duplicates within a row are ignored.<br />
+                    If ManagerName doesn't exist it will be auto-created (Location &amp; Email blank — update afterwards).<br />
+                    Rows with a duplicate AsNumber are skipped. Names must not contain commas.
+                </p>
+                <pre class="bg-light p-2 rounded small">Name,AsNumber,ManagerName,HomePoolCode,RoleTitle,GcmLevel,SfiaLevel,ContractJobTitle,PrimaryPlatform,SecondaryPlatform,TertiaryPlatform
+Jane Smith,AS10001,John Manager,SA-01,Solution Architect,7,4,Principal Architect,AWS,Azure,
+Bob Jones,AS10002,John Manager,DE-01,Senior Software Engineer,5,3,,Linux/Unix,,
+Alice Brown,AS10003,Sarah Lead,,,,,,,,</pre>
+                <form asp-action="SeedStaff" method="post" enctype="multipart/form-data" style="max-width: 420px;">
+                    <div class="mb-2">
+                        <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>

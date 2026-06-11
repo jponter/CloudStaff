@@ -1,0 +1,492 @@
+@model CloudStaff.MVC.Features.Allocations.AllocationsViewModel
+@{
+    ViewData["Title"] = "Allocations";
+    bool isWeeks = Model.Mode == "weeks";
+}
+
+<style>
+/* ── Allocation colours — badge/span elements ───────────────────────────── */
+.alloc-none { background-color: #dc3545; color: #fff; }
+.alloc-low  { background-color: #fd7e14; color: #fff; }
+.alloc-mid  { background-color: #ffc107; color: #212529; }
+.alloc-good { background-color: #0dcaf0; color: #212529; }
+.alloc-high { background-color: #198754; color: #fff; }
+.alloc-full { background-color: #0d6efd; color: #fff; }
+.alloc-over { background-color: #6f42c1; color: #fff; }
+
+/* ── Allocation colours — Bootstrap 5 table cells (override --bs-table-bg) */
+td.alloc-none { --bs-table-bg: #dc3545; color: #fff; }
+td.alloc-low  { --bs-table-bg: #fd7e14; color: #fff; }
+td.alloc-mid  { --bs-table-bg: #ffc107; color: #212529; }
+td.alloc-good { --bs-table-bg: #0dcaf0; color: #212529; }
+td.alloc-high { --bs-table-bg: #198754; color: #fff; }
+td.alloc-full { --bs-table-bg: #0d6efd; color: #fff; }
+td.alloc-over { --bs-table-bg: #6f42c1; color: #fff; }
+
+/* ── Timeline table ─────────────────────────────────────────────────────── */
+.alloc-cell {
+    cursor: pointer;
+    text-align: center;
+    min-width: 70px;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    font-weight: 600;
+    vertical-align: middle;
+    transition: filter 0.1s;
+}
+.alloc-cell:hover { filter: brightness(0.85); }
+
+.staff-name-col {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 2;
+    min-width: 175px;
+    max-width: 175px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.07);
+    vertical-align: middle;
+}
+thead .staff-name-col { z-index: 3; background: #f8f9fa; }
+
+.period-th {
+    text-align: center;
+    min-width: 70px;
+    background: #f8f9fa;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    vertical-align: bottom;
+    padding-bottom: 6px !important;
+}
+.alloc-table th, .alloc-table td { padding: 0.32rem 0.4rem; }
+</style>
+
+<h1 class="h3 mb-3">Allocations</h1>
+
+@* ── Controls bar ──────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+
+    @* View As *@
+    <form method="get" class="d-flex align-items-center gap-2">
+        <input type="hidden" name="mode"        value="@Model.Mode" />
+        <input type="hidden" name="year"        value="@Model.Year" />
+        <input type="hidden" name="startPeriod" value="@Model.StartPeriod" />
+        <label class="form-label mb-0 small fw-semibold text-nowrap">View as:</label>
+        <select name="managerId" class="form-select form-select-sm"
+                style="min-width:190px" onchange="this.form.submit()">
+            @foreach (var m in Model.Managers)
+            {
+                if (m.Id == Model.SelectedManagerId)
+                {
+                    <option value="@m.Id" selected>@m.Name</option>
+                }
+                else
+                {
+                    <option value="@m.Id">@m.Name</option>
+                }
+            }
+        </select>
+    </form>
+
+    @* Mode toggle *@
+    <div class="btn-group btn-group-sm" role="group">
+        <a asp-action="Index"
+           asp-route-managerId="@Model.SelectedManagerId"
+           asp-route-mode="weeks"
+           asp-route-year="@Model.Year"
+           asp-route-startPeriod="@Model.StartPeriod"
+           class="btn btn-outline-secondary @(isWeeks ? "active" : "")">Weeks</a>
+        <a asp-action="Index"
+           asp-route-managerId="@Model.SelectedManagerId"
+           asp-route-mode="months"
+           asp-route-year="@Model.Year"
+           class="btn btn-outline-secondary @(!isWeeks ? "active" : "")">Months</a>
+    </div>
+
+    @* Navigation *@
+    <div class="btn-group btn-group-sm" role="group">
+        <a asp-action="Index"
+           asp-route-managerId="@Model.SelectedManagerId"
+           asp-route-mode="@Model.Mode"
+           asp-route-year="@Model.PrevYear"
+           asp-route-startPeriod="@Model.PrevStartPeriod"
+           class="btn btn-outline-secondary">‹ Prev</a>
+        <a asp-action="Index"
+           asp-route-managerId="@Model.SelectedManagerId"
+           asp-route-mode="@Model.Mode"
+           class="btn btn-outline-secondary">Today</a>
+        <a asp-action="Index"
+           asp-route-managerId="@Model.SelectedManagerId"
+           asp-route-mode="@Model.Mode"
+           asp-route-year="@Model.NextYear"
+           asp-route-startPeriod="@Model.NextStartPeriod"
+           class="btn btn-outline-secondary">Next ›</a>
+    </div>
+
+    @if (isWeeks)
+    {
+        <small class="text-muted">
+            @Model.Periods.First().SubLabel @Model.Periods.First().Year
+            &ndash;
+            @Model.Periods.Last().SubLabel @Model.Periods.Last().Year
+        </small>
+    }
+    else
+    {
+        <small class="text-muted fw-semibold">@Model.Year</small>
+    }
+</div>
+
+@* ── Legend ─────────────────────────────────────────────────────────────────── *@
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <small class="text-muted me-1">Allocation:</small>
+    <span class="badge alloc-none">0% — None</span>
+    <span class="badge alloc-low">1–25%</span>
+    <span class="badge alloc-mid">26–50%</span>
+    <span class="badge alloc-good">51–75%</span>
+    <span class="badge alloc-high">76–99%</span>
+    <span class="badge alloc-full">100% ✓ Ideal</span>
+    <span class="badge alloc-over">⚠ Over 100%</span>
+    <small class="text-muted ms-2">— click any cell to manage</small>
+</div>
+
+@* ── Timeline table ─────────────────────────────────────────────────────────── *@
+@if (!Model.Managers.Any())
+{
+    <div class="alert alert-info">No managers found — add managers first.</div>
+}
+else if (!Model.StaffRows.Any())
+{
+    <div class="alert alert-info">No staff assigned to this manager.</div>
+}
+else
+{
+    <div class="table-responsive border rounded shadow-sm">
+        <table class="table table-bordered table-sm mb-0 alloc-table">
+            <thead class="table-light">
+                <tr>
+                    <th class="staff-name-col">Staff</th>
+                    @foreach (var p in Model.Periods)
+                    {
+                        <th class="period-th">
+                            @p.Label<br />
+                            <span class="text-muted fw-normal" style="font-size:0.7rem">@p.SubLabel</span>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.StaffRows)
+                {
+                    <tr>
+                        <td class="staff-name-col">
+                            <div class="fw-semibold text-truncate" title="@row.StaffName" style="max-width:160px">@row.StaffName</div>
+                            <small class="text-muted">@row.AsNumber</small>
+                        </td>
+                        @for (int i = 0; i < row.Cells.Count; i++)
+                        {
+                            var cell   = row.Cells[i];
+                            var period = Model.Periods[i];
+                            <td class="alloc-cell @cell.ColorClass"
+                                data-staff-id="@row.StaffId"
+                                data-staff-name="@row.StaffName"
+                                data-year="@cell.Year"
+                                data-period="@cell.PeriodNumber"
+                                data-mode="@Model.Mode"
+                                data-label="@period.Label @period.SubLabel@(period.Year != Model.Year ? " " + period.Year.ToString() : "")"
+                                data-period-start="@period.StartDate.ToString("yyyy-MM-dd")"
+                                data-period-end="@period.EndDate.ToString("yyyy-MM-dd")"
+                                title="@row.StaffName — @period.Label @period.SubLabel — click to edit">
+                                @if (cell.TotalPercent > 0)
+                                {
+                                    @($"{cell.TotalPercent}%")
+                                    if (cell.TotalPercent > 100) { <text> ⚠</text> }
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* ── Allocation modal ────────────────────────────────────────────────────────── *@
+<div class="modal fade" id="allocModal" tabindex="-1" aria-labelledby="allocModalLabel">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title small fw-semibold" id="allocModalLabel">Allocations</h5>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <div id="allocLoading" class="text-muted small">Loading…</div>
+
+                <div id="allocContent" class="d-none">
+
+                    @* Current allocations *@
+                    <div id="currentAllocsDiv" class="mb-3"></div>
+
+                    @* Period total *@
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="small fw-semibold">Period total:</span>
+                        <span id="totalBadge" class="badge alloc-none fs-6">0%</span>
+                        <span id="overWarn" class="text-danger small d-none fw-semibold">⚠ Overallocated</span>
+                    </div>
+
+                    <hr class="my-2" />
+
+                    @* Add / update form *@
+                    <p class="small text-muted mb-2 fw-semibold">Add or update an allocation</p>
+
+                    <div class="mb-2">
+                        <select id="projectSelect" class="form-select form-select-sm">
+                            <option value="">— Select project —</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-auto">
+                            <label class="form-label small mb-1">%</label>
+                            <div class="input-group input-group-sm" style="width:100px">
+                                <input type="number" id="pctInput" class="form-control" min="1" max="999" placeholder="e.g. 75" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small mb-1">Start date</label>
+                            <input type="date" id="startDateInput" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label small mb-1">End date</label>
+                            <input type="date" id="endDateInput" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div id="periodPreview" class="text-muted small mb-2"></div>
+
+                    <button id="btnSave" class="btn btn-sm btn-primary">Save allocation</button>
+                    <div id="modalError" class="text-danger small mt-1"></div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    let ctx = {};
+
+    // ── colour helper ─────────────────────────────────────────────────────────
+    function allocClass(pct) {
+        if (pct === 0)   return 'alloc-none';
+        if (pct <= 25)   return 'alloc-low';
+        if (pct <= 50)   return 'alloc-mid';
+        if (pct <= 75)   return 'alloc-good';
+        if (pct <= 99)   return 'alloc-high';
+        if (pct === 100) return 'alloc-full';
+        return 'alloc-over';
+    }
+
+    function escHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s ?? '';
+        return d.innerHTML;
+    }
+
+    // ── update modal total badge ──────────────────────────────────────────────
+    function refreshTotal(total) {
+        const badge = document.getElementById('totalBadge');
+        badge.textContent = total + '%';
+        badge.className = 'badge fs-6 ' + allocClass(total);
+        document.getElementById('overWarn').classList.toggle('d-none', total <= 100);
+    }
+
+    // ── period span preview (informational only) ──────────────────────────────
+    function countPeriods(startStr, endStr, mode) {
+        if (!startStr || !endStr) return 1;
+        const start = new Date(startStr + 'T00:00:00');
+        const end   = new Date(endStr   + 'T00:00:00');
+        if (end < start) return 0;
+        if (mode === 'weeks') {
+            const d = new Date(start);
+            const dow = d.getDay();
+            d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+            let n = 0;
+            while (d <= end) { n++; d.setDate(d.getDate() + 7); }
+            return n;
+        }
+        return (end.getFullYear() - start.getFullYear()) * 12
+             + (end.getMonth()    - start.getMonth())    + 1;
+    }
+
+    function updatePreview() {
+        const s    = document.getElementById('startDateInput').value;
+        const e    = document.getElementById('endDateInput').value;
+        const prev = document.getElementById('periodPreview');
+        if (!s || !e) { prev.textContent = ''; return; }
+        const n    = countPeriods(s, e, ctx.mode);
+        const unit = ctx.mode === 'weeks' ? 'week' : 'month';
+        if (n <= 0) { prev.textContent = 'End date must be on or after start date.'; return; }
+        prev.textContent = 'Spans ' + n + ' ' + unit + (n > 1 ? 's' : '') + '.';
+    }
+
+    // ── render project dropdown ───────────────────────────────────────────────
+    function renderProjects(projects) {
+        const sel = document.getElementById('projectSelect');
+        sel.innerHTML = '<option value="">— Select project —</option>';
+        let lastClient = '', group = null;
+        projects.forEach(p => {
+            if (p.clientName !== lastClient) {
+                group = document.createElement('optgroup');
+                group.label = p.clientName;
+                sel.appendChild(group);
+                lastClient = p.clientName;
+            }
+            (group || sel).appendChild(new Option(p.name, p.id));
+        });
+    }
+
+    // ── render current allocations table ─────────────────────────────────────
+    function renderAllocs(allocs) {
+        const div = document.getElementById('currentAllocsDiv');
+        if (!allocs.length) {
+            div.innerHTML = '<p class="text-muted small mb-0">No allocations yet — add one below.</p>';
+            return;
+        }
+        div.innerHTML =
+            '<table class="table table-sm table-borderless mb-0">' +
+            '<thead class="text-muted" style="font-size:0.73rem">' +
+            '<tr><th>Project</th><th>Client</th><th>Start</th><th>End</th>' +
+            '<th class="text-end" style="width:56px">%</th>' +
+            '<th style="width:32px"></th></tr></thead><tbody>' +
+            allocs.map(a => `<tr>
+                <td class="py-1">${escHtml(a.projectName)}</td>
+                <td class="py-1 text-muted small">${escHtml(a.clientName)}</td>
+                <td class="py-1 text-muted small" style="white-space:nowrap">${a.startDate}</td>
+                <td class="py-1 text-muted small" style="white-space:nowrap">${a.endDate}</td>
+                <td class="py-1 text-end fw-semibold">${a.percentage}%</td>
+                <td class="py-1 text-end">
+                    <button class="btn btn-sm btn-outline-danger py-0 px-1 lh-1"
+                            onclick="window._removeAlloc(${a.id})" title="Remove">×</button>
+                </td>
+            </tr>`).join('') +
+            '</tbody></table>';
+    }
+
+    // ── load cell data ────────────────────────────────────────────────────────
+    async function loadCell() {
+        document.getElementById('allocLoading').classList.remove('d-none');
+        document.getElementById('allocContent').classList.add('d-none');
+        document.getElementById('modalError').textContent = '';
+        document.getElementById('pctInput').value = '';
+
+        const qs = `staffId=${ctx.staffId}&periodStart=${ctx.periodStart}&periodEnd=${ctx.periodEnd}`;
+        try {
+            const resp = await fetch('/Allocations/CellData?' + qs);
+            const data = await resp.json();
+            renderAllocs(data.allocations);
+            renderProjects(data.projects);
+            refreshTotal(data.total);
+            document.getElementById('allocLoading').classList.add('d-none');
+            document.getElementById('allocContent').classList.remove('d-none');
+        } catch {
+            document.getElementById('allocLoading').textContent = 'Error loading data.';
+        }
+    }
+
+    // ── cell click ────────────────────────────────────────────────────────────
+    document.querySelectorAll('.alloc-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+            ctx = {
+                staffId:     cell.dataset.staffId,
+                mode:        cell.dataset.mode,
+                staffName:   cell.dataset.staffName,
+                periodLabel: cell.dataset.label.trim(),
+                periodStart: cell.dataset.periodStart,
+                periodEnd:   cell.dataset.periodEnd
+            };
+
+            document.getElementById('allocModalLabel').textContent =
+                ctx.staffName + ' — ' + ctx.periodLabel;
+
+            // Default dates to this period's boundaries
+            document.getElementById('startDateInput').value = ctx.periodStart;
+            document.getElementById('endDateInput').value   = ctx.periodEnd;
+            document.getElementById('periodPreview').textContent = '';
+
+            loadCell();
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('allocModal')
+            ).show();
+        });
+    });
+
+    document.getElementById('startDateInput').addEventListener('change', updatePreview);
+    document.getElementById('endDateInput').addEventListener('change', updatePreview);
+
+    // ── save allocation ───────────────────────────────────────────────────────
+    document.getElementById('btnSave').addEventListener('click', async () => {
+        const projectId = document.getElementById('projectSelect').value;
+        const pct       = parseInt(document.getElementById('pctInput').value);
+        const startDate = document.getElementById('startDateInput').value || null;
+        const endDate   = document.getElementById('endDateInput').value   || null;
+        const errEl     = document.getElementById('modalError');
+        errEl.textContent = '';
+
+        if (!projectId)      { errEl.textContent = 'Please select a project.'; return; }
+        if (!pct || pct < 1) { errEl.textContent = 'Enter a percentage (≥ 1).'; return; }
+        if (!startDate)      { errEl.textContent = 'Start date is required.'; return; }
+        if (!endDate)        { errEl.textContent = 'End date is required.'; return; }
+        if (endDate < startDate) { errEl.textContent = 'End date must be on or after start date.'; return; }
+
+        const body = {
+            staffId:         parseInt(ctx.staffId),
+            clientProjectId: parseInt(projectId),
+            startDate,
+            endDate,
+            percentage:      pct,
+            periodStart:     ctx.periodStart,
+            periodEnd:       ctx.periodEnd
+        };
+
+        try {
+            const resp = await fetch('/Allocations/SetAllocation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) { errEl.textContent = 'Server error. Please try again.'; return; }
+            // Reload so all cells that overlap the saved date range update correctly
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('allocModal')).hide();
+            window.location.reload();
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+        }
+    });
+
+    // ── remove allocation ─────────────────────────────────────────────────────
+    window._removeAlloc = async function (id) {
+        const errEl = document.getElementById('modalError');
+        errEl.textContent = '';
+        try {
+            const resp = await fetch('/Allocations/DeleteAllocation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, periodStart: ctx.periodStart, periodEnd: ctx.periodEnd })
+            });
+            if (!resp.ok) { errEl.textContent = 'Error deleting.'; return; }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('allocModal')).hide();
+            window.location.reload();
+        } catch (err) {
+            errEl.textContent = 'Network error: ' + err.message;
+        }
+    };
+
+}());
+</script>
+}

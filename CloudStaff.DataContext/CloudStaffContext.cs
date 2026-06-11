@@ -16,6 +16,7 @@ public class CloudStaffContext : DbContext
     public DbSet<StaffRole> StaffRoles => Set<StaffRole>();
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<StaffPlatform> StaffPlatforms => Set<StaffPlatform>();
+    public DbSet<StaffAllocation> StaffAllocations => Set<StaffAllocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -123,6 +124,20 @@ public class CloudStaffContext : DbContext
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).IsRequired().HasMaxLength(200);
             e.Property(p => p.Description).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<StaffAllocation>(e =>
+        {
+            e.ToTable("staff_allocations");
+            e.HasKey(a => a.Id);
+            e.HasOne(a => a.Staff)
+             .WithMany()
+             .HasForeignKey(a => a.StaffId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.ClientProject)
+             .WithMany()
+             .HasForeignKey(a => a.ClientProjectId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

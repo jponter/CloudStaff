@@ -31,6 +31,11 @@ Features/
       Edit.cshtml
       Delete.cshtml
       _Form.cshtml
+  Allocations/
+    AllocationsController.cs
+    AllocationsViewModel.cs
+    Views/
+      Index.cshtml
   Staff/                         # TODO
   Clients/                       # TODO
     Projects/                    # TODO
@@ -213,6 +218,18 @@ No cap on platforms per staff member. Use this table for queries like "how many 
 | Description | string(1000) | |
 | ClientId | int FK | → clients, ON DELETE CASCADE |
 
+#### StaffAllocation
+| Column | Type | Notes |
+|---|---|---|
+| Id | int | PK, identity |
+| StaffId | int FK | → staff, ON DELETE CASCADE |
+| ClientProjectId | int FK | → client_projects, ON DELETE CASCADE |
+| StartDate | DateOnly | Required — inclusive start of allocation |
+| EndDate | DateOnly | Required — inclusive end of allocation |
+| Percentage | int | 0–100+; >100 triggers over-allocation warning |
+
+Date ranges are the single source of truth. Both weekly and monthly timeline views derive cell values by checking overlap: `StartDate <= periodEnd AND EndDate >= periodStart`. Multiple allocations for different projects can overlap on the same staff member (additive — total shown in cell).
+
 ### Relationships Summary
 
 ```
@@ -237,6 +254,9 @@ Client → ClientProject
 |---|---|
 | 20260610155949_addManagerFields | Initial schema + Manager extra fields (AsNumber, Location, Email) |
 | 20260610164813_AddStaffModel | Staff extra fields, lookup tables (StaffCategory, HomePool, StaffRole, Platform, StaffPlatform) |
+| 20260611084804_AddStaffAllocations | Creates `staff_allocations` table with Year/WeekNumber/Month period model |
+| 20260611090020_AddAllocationDates | Adds nullable StartDate/EndDate to staff_allocations |
+| 20260611092158_RefactorAllocationsToDateRange | **Breaking** — removes Year/WeekNumber/Month columns, makes StartDate/EndDate NOT NULL. Clears all existing allocation rows. Date range is now the sole truth for allocation periods. |
 
 ---
 
@@ -245,6 +265,15 @@ Client → ClientProject
 - [x] Managers — full CRUD (Index, Create, Edit, Delete)
   - Delete blocked at UI and POST level if staff are assigned
   - AsNumber uniqueness validated on Create and Edit
+- [x] Allocations — timeline view with weekly and monthly modes
+  - "View as" manager dropdown scopes the grid to that manager's staff
+  - 13-week rolling window with prev/next navigation; full 12-month view for months mode
+  - Color-coded cells: None (red) → Low → Mid → Good → High → Full (blue) → Over (purple)
+  - Click any cell to open modal: shows existing allocations with start/end dates, add new allocation with date pickers, delete individual allocations
+  - Start/end dates default to clicked period boundaries; user can extend across multiple periods
+  - Single allocation record stored per project assignment (date range, not per-period rows)
+  - Both weekly and monthly views read from the same records via date-overlap query — consistent across view modes
+  - AJAX endpoints: `CellData`, `SetAllocation`, `DeleteAllocation`; page reloads after any mutation so all overlapping cells refresh
 
 ## Features Planned
 
@@ -252,8 +281,7 @@ Client → ClientProject
 - [ ] Seed/import page (`/Admin/Seed`) for lookup table data (StaffCategory, HomePool, StaffRole, Platform) loaded from Excel/CSV
 - [ ] Clients — CRUD
 - [ ] Client Projects — CRUD (nested under Clients)
-- [ ] Staff allocation to projects
-- [ ] Forecasting views
+- [ ] Forecasting views / utilisation reports
 
 ---
 

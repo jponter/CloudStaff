@@ -3,6 +3,7 @@ using System;
 using CloudStaff.DataContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CloudStaff.DataContext.Migrations
 {
     [DbContext(typeof(CloudStaffContext))]
-    partial class CloudStaffContextModelSnapshot : ModelSnapshot
+    [Migration("20260611090020_AddAllocationDates")]
+    partial class AddAllocationDates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -226,8 +229,11 @@ namespace CloudStaff.DataContext.Migrations
                     b.Property<int>("ClientProjectId")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly>("EndDate")
+                    b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
+
+                    b.Property<int?>("Month")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Percentage")
                         .HasColumnType("integer");
@@ -235,8 +241,14 @@ namespace CloudStaff.DataContext.Migrations
                     b.Property<int>("StaffId")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly>("StartDate")
+                    b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
+
+                    b.Property<int?>("WeekNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

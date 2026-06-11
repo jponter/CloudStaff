@@ -1,0 +1,42 @@
+@model IEnumerable<CloudStaff.MVC.Features.Clients.ClientViewModel>
+@using CloudStaff.EntityModels
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Clients</h1>
+    <a asp-action="Create" class="btn btn-primary">Add Client</a>
+</div>
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Projects</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>
+                    <a asp-action="Details" asp-route-id="@c.Id" class="fw-semibold text-decoration-none">@c.Name</a>
+                </td>
+                <td>
+                    <span class="badge @(c.Type == ClientType.Internal ? "bg-secondary" : "bg-primary")">@c.Type</span>
+                </td>
+                <td class="text-muted small">@c.Description</td>
+                <td>@c.ProjectCount</td>
+                <td class="text-end">
+                    <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary">Projects</a>
+                    <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@c.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
