@@ -56,149 +56,258 @@
 <input type="hidden" id="client-id" value="@Model.Id" />
 
 @section Scripts {
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
-<script>
-(function () {
-    const clientId = parseInt(document.getElementById('client-id').value, 10);
-    const statusEl = document.getElementById('saveStatus');
-    const countEl  = document.getElementById('projectCount');
-    const addBtn   = document.getElementById('btnAddProject');
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
+    <script>
+        (function () {
+        const clientId = parseInt(document.getElementById('client-id').value, 10);
+        const statusEl = document.getElementById('saveStatus');
+        const countEl  = document.getElementById('projectCount');
+        const addBtn   = document.getElementById('btnAddProject');
 
-    // ── guard: show error if AG Grid script didn't load ───────────
-    if (typeof agGrid === 'undefined') {
+        // ── status maps ───────────────────────────────────────────────
+        const statusIntToStr = { 0: 'Active', 1: 'OnHold', 2: 'Closed' };
+        const statusStrToInt = { 'Active': 0, 'OnHold': 1, 'Closed': 2 };
+
+        // ── guard: show error if AG Grid script didn't load ───────────
+        if (typeof agGrid === 'undefined') {
         statusEl.textContent = 'AG Grid failed to load from CDN — projects unavailable.';
         statusEl.className = 'small text-danger';
         addBtn.disabled = true;
         return;
-    }
+        }
 
-    // ── helpers ───────────────────────────────────────────────────
+        // ── helpers ───────────────────────────────────────────────────
 
-    function setStatus(msg, isError) {
+        function setStatus(msg, isError) {
         statusEl.textContent = msg;
         statusEl.className = 'small ' + (isError ? 'text-danger' : 'text-success');
         if (!isError) setTimeout(() => { statusEl.textContent = ''; }, 2000);
-    }
+        }
 
-    async function post(url, body) {
+        async function post(url, body) {
         return fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: body !== undefined ? JSON.stringify(body) : undefined
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body !== undefined ? JSON.stringify(body) : undefined
         });
-    }
+        }
 
-    function refreshCount(api) {
+        function refreshCount(api) {
         let n = 0;
         api.forEachNode(() => n++);
         countEl.textContent = n;
-    }
+        }
 
-    // ── grid definition ───────────────────────────────────────────
+        function toStatusInt(val) {
+        if (typeof val === 'number') return val;
+        const mapped = statusStrToInt[val];
+        return mapped !== undefined ? mapped : 0;
+        }
 
-    const gridOptions = {
+        // ── grid definition ───────────────────────────────────────────
+
+        const gridOptions = {
         columnDefs: [
-            {
-                field: 'name',
-                headerName: 'Project Name',
-                editable: true,
-                flex: 1,
-                minWidth: 220,
-                cellStyle: { cursor: 'text' }
-            },
-            {
-                field: 'description',
-                headerName: 'Description',
-                editable: true,
-                flex: 2,
-                minWidth: 320,
-                cellStyle: { cursor: 'text' },
-                cellEditor: 'agLargeTextCellEditor',
-                cellEditorPopup: true,
-                cellEditorParams: { maxLength: 1000, rows: 4, cols: 50 }
-            },
-            {
-                headerName: '',
-                width: 90,
-                sortable: false,
-                filter: false,
-                editable: false,
-                resizable: false,
-                cellRenderer: (params) => {
-                    const btn = document.createElement('button');
-                    btn.textContent = 'Delete';
-                    btn.className = 'btn btn-sm btn-outline-danger py-0 px-2';
-                    btn.addEventListener('click', () => confirmDelete(params));
-                    return btn;
-                }
-            }
+        {
+        field: 'name',
+        headerName: 'Project Name',
+        editable: true,
+        flex: 1,
+        cellStyle: { cursor: 'text' }
+        },
+        {
+        field: 'description',
+        headerName: 'Description',
+        editable: true,
+        flex: 2,
+        cellStyle: { cursor: 'text' },
+        cellEditor: 'agLargeTextCellEditor',
+        cellEditorPopup: true,
+        cellEditorParams: { maxLength: 1000, rows: 4, cols: 50 }
+        },
+        {
+        field: 'projectManagerName',
+        headerName: 'Project Manager',
+        editable: true,
+        flex: 1
+        },
+        {
+        field: 'startDate',
+        headerName: 'Start Date',
+        editable: true,
+        width: 130,
+        cellEditor: 'agDateCellEditor',
+        valueGetter: (params) => {
+        if (!params.data.startDate) return null;
+        return new Date(params.data.startDate);
+        },
+        valueSetter: (params) => {
+        if (params.newValue) {
+        const d = params.newValue;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        params.data.startDate = `${yyyy}-${mm}-${dd}`;
+        } else {
+        params.data.startDate = null;
+        }
+        return true;
+        },
+        valueFormatter: (params) => {
+        if (!params.value) return '';
+        const d = new Date(params.value);
+        return isNaN(d) ? '' : d.toLocaleDateString('en-GB');
+        }
+        },
+        {
+        field: 'endDate',
+        headerName: 'End Date',
+        editable: true,
+        width: 130,
+        cellEditor: 'agDateCellEditor',
+        valueGetter: (params) => {
+        if (!params.data.endDate) return null;
+        return new Date(params.data.endDate);
+        },
+        valueSetter: (params) => {
+        if (params.newValue) {
+        const d = params.newValue;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        params.data.endDate = `${yyyy}-${mm}-${dd}`;
+        } else {
+        params.data.endDate = null;
+        }
+        return true;
+        },
+        valueFormatter: (params) => {
+        if (!params.value) return '';
+        const d = new Date(params.value);
+        return isNaN(d) ? '' : d.toLocaleDateString('en-GB');
+        }
+        },
+        {
+        field: 'status',
+        headerName: 'Status',
+        editable: true,
+        width: 120,
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: { values: ['Active', 'OnHold', 'Closed'] },
+        valueGetter: (params) => {
+        return statusIntToStr[params.data.status] ?? 'Active';
+        },
+        valueSetter: (params) => {
+        params.data.status = statusStrToInt[params.newValue] ?? 0;
+        return true;
+        },
+        cellRenderer: (params) => {
+        const label = typeof params.value === 'string'
+        ? params.value
+        : (statusIntToStr[params.value] ?? 'Active');
+        const colours = {
+        'Active': 'bg-success',
+        'OnHold': 'bg-warning text-dark',
+        'Closed': 'bg-secondary'
+        };
+        const badge = document.createElement('span');
+        badge.textContent = label;
+        badge.className = 'badge ' + (colours[label] ?? 'bg-secondary');
+        return badge;
+        }
+        },
+        {
+        headerName: '',
+        width: 90,
+        sortable: false,
+        filter: false,
+        editable: false,
+        resizable: false,
+        cellRenderer: (params) => {
+        const btn = document.createElement('button');
+        btn.textContent = 'Delete';
+        btn.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+        btn.addEventListener('click', () => confirmDelete(params));
+        return btn;
+        }
+        }
         ],
         defaultColDef: { sortable: true, filter: true, resizable: true },
         rowData: [],
         domLayout: 'autoHeight',
         singleClickEdit: true,
         stopEditingWhenCellsLoseFocus: true,
+        onGridReady: (params) => {
+        params.api.sizeColumnsToFit();
+        },
+        onGridSizeChanged: (params) => {
+        params.api.sizeColumnsToFit();
+        },
         onCellValueChanged: async (e) => {
-            if (!e.data.id) return;
-            setStatus('Saving…');
-            const resp = await post('/Clients/UpdateProject', {
-                id: e.data.id,
-                clientId,
-                name: e.data.name || '',
-                description: e.data.description || ''
-            });
-            resp.ok ? setStatus('Saved') : setStatus('Error saving', true);
+        if (!e.data.id) return;
+        setStatus('Saving…');
+        const resp = await post('/Clients/UpdateProject', {
+        id: e.data.id,
+        clientId,
+        name: e.data.name || '',
+        description: e.data.description || '',
+        projectManagerName: e.data.projectManagerName || null,
+        startDate: e.data.startDate || null,
+        endDate: e.data.endDate || null,
+        status: toStatusInt(e.data.status)
+        });
+        resp.ok ? setStatus('Saved') : setStatus('Error saving', true);
         }
-    };
+        };
 
-    const gridApi = agGrid.createGrid(document.getElementById('projectGrid'), gridOptions);
+        const gridApi = agGrid.createGrid(document.getElementById('projectGrid'), gridOptions);
 
-    // ── load initial rows ─────────────────────────────────────────
+        // ── load initial rows ─────────────────────────────────────────
 
-    fetch(`/Clients/ProjectsJson/${clientId}`)
+        fetch(`/Clients/ProjectsJson/${clientId}`)
         .then(r => r.json())
         .then(rows => {
-            gridApi.setGridOption('rowData', rows);
-            countEl.textContent = rows.length;
+        gridApi.setGridOption('rowData', rows);
+        countEl.textContent = rows.length;
         })
         .catch(() => setStatus('Failed to load projects', true));
 
-    // ── add project ───────────────────────────────────────────────
+        // ── add project ───────────────────────────────────────────────
 
-    addBtn.addEventListener('click', async () => {
+        addBtn.addEventListener('click', async () => {
         addBtn.disabled = true;
         try {
-            const resp = await post('/Clients/AddProject', {
-                clientId,
-                name: 'New Project',
-                description: ''
-            });
+        const resp = await post('/Clients/AddProject', {
+        clientId,
+        name: 'New Project',
+        description: ''
+        });
 
-            if (!resp.ok) { setStatus('Error creating project — server returned ' + resp.status, true); return; }
+        if (!resp.ok) { setStatus('Error creating project — server returned ' + resp.status, true); return; }
 
-            const row = await resp.json();
-            gridApi.applyTransaction({ add: [row], addIndex: 0 });
-            refreshCount(gridApi);
-            setTimeout(() => gridApi.startEditingCell({ rowIndex: 0, colKey: 'name' }), 50);
+        const row = await resp.json();
+        gridApi.applyTransaction({ add: [row], addIndex: 0 });
+        refreshCount(gridApi);
+        setTimeout(() => gridApi.startEditingCell({ rowIndex: 0, colKey: 'name' }), 50);
         } catch (err) {
-            setStatus('Error: ' + err.message, true);
+        setStatus('Error: ' + err.message, true);
         } finally {
-            addBtn.disabled = false;
+        addBtn.disabled = false;
         }
-    });
+        });
 
-    // ── delete project ────────────────────────────────────────────
+        // ── delete project ────────────────────────────────────────────
 
-    async function confirmDelete(params) {
+        async function confirmDelete(params) {
         if (!confirm(`Delete "${params.data.name || 'this project'}"?`)) return;
         const resp = await post(`/Clients/DeleteProject/${params.data.id}`);
         if (resp.ok) {
-            params.api.applyTransaction({ remove: [params.data] });
-            refreshCount(params.api);
+        params.api.applyTransaction({ remove: [params.data] });
+        refreshCount(params.api);
         } else {
-            setStatus('Error deleting project', true);
+        setStatus('Error deleting project', true);
         }
-    }
-}());
-</script>
+        }
+        }());
+    </script>
 }

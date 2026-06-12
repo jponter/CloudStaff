@@ -8,5 +8,10 @@
         public Client Client { get; set; } = null!;
 
         public int ClientId { get; set; }
+        public string? ProjectManagerName { get; set; }
+        public string? ProjectManagerEmail { get; set; }
+        public DateOnly? StartDate { get; set; }
+        public  DateOnly? EndDate { get; set; }
+        public ClientProjectStatus Status { get; set; } = ClientProjectStatus.Active;
     }
 }

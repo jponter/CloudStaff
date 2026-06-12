@@ -56,7 +56,16 @@ public class ClientsController : Controller
         var projects = await _db.ClientProjects
             .Where(p => p.ClientId == id)
             .OrderBy(p => p.Name)
-            .Select(p => new { id = p.Id, clientId = p.ClientId, name = p.Name, description = p.Description })
+            .Select(p => new {
+                id = p.Id, 
+                clientId = p.ClientId, 
+                name = p.Name, 
+                description = p.Description ,
+                projectManagerName = p.ProjectManagerName,
+                startDate = p.StartDate == null ? null : p.StartDate.Value.ToString("yyyy-MM-dd"),
+                endDate = p.EndDate == null ? null : p.EndDate.Value.ToString("yyyy-MM-dd"),
+                status = p.Status
+            })
             .ToListAsync();
 
         return Json(projects);
@@ -75,6 +84,10 @@ public class ClientsController : Controller
             ClientId = vm.ClientId,
             Name = vm.Name.Trim(),
             Description = vm.Description?.Trim() ?? string.Empty,
+            ProjectManagerName = vm.ProjectManagerName?.Trim() ?? string.Empty,
+            StartDate = vm.StartDate.HasValue ? DateOnly.FromDateTime(vm.StartDate.Value) : null,
+            EndDate = vm.EndDate.HasValue ? DateOnly.FromDateTime(vm.EndDate.Value) : null,
+            Status = vm.Status
         };
         _db.ClientProjects.Add(project);
         await _db.SaveChangesAsync();
@@ -92,6 +105,11 @@ public class ClientsController : Controller
 
         project.Name = string.IsNullOrWhiteSpace(vm.Name) ? project.Name : vm.Name.Trim();
         project.Description = vm.Description?.Trim() ?? string.Empty;
+        project.ProjectManagerName = vm.ProjectManagerName?.Trim() ?? string.Empty;
+        project.StartDate = vm.StartDate.HasValue ? DateOnly.FromDateTime(vm.StartDate.Value) : null;
+        project.EndDate = vm.EndDate.HasValue ? DateOnly.FromDateTime(vm.EndDate.Value) : null;
+        project.Status = vm.Status;
+
         await _db.SaveChangesAsync();
 
         return Json(new { success = true });
@@ -130,6 +148,14 @@ public class ClientsController : Controller
             Name = vm.Name,
             Description = vm.Description ?? string.Empty,
             Type = vm.Type,
+            PrimaryContactName = vm.PrimaryContactName,
+            PrimaryContactEmail = vm.PrimaryContactEmail,
+            AccountManagerName = vm.AccountManagerName,
+            AccountManagerEmail = vm.AccountManagerEmail,
+            ExecutiveSponsorName = vm.ExecutiveSponsorName,
+            ExecutiveSponsorEmail = vm.ExecutiveSponsorEmail,
+            Status = vm.Status
+
         });
         await _db.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
@@ -147,6 +173,13 @@ public class ClientsController : Controller
             Name = client.Name,
             Description = client.Description,
             Type = client.Type,
+            PrimaryContactName = client.PrimaryContactName,
+            PrimaryContactEmail = client.PrimaryContactEmail,
+            AccountManagerName = client.AccountManagerName,
+            AccountManagerEmail = client.AccountManagerEmail,
+            ExecutiveSponsorName = client.ExecutiveSponsorName,
+            ExecutiveSponsorEmail = client.ExecutiveSponsorEmail,
+            Status = client.Status
         });
     }
 
@@ -164,6 +197,13 @@ public class ClientsController : Controller
         client.Name = vm.Name;
         client.Description = vm.Description ?? string.Empty;
         client.Type = vm.Type;
+        client.PrimaryContactName = vm.PrimaryContactName?.Trim() ?? string.Empty;
+        client.PrimaryContactEmail = vm.PrimaryContactEmail?.Trim() ?? string.Empty;
+        client.AccountManagerName = vm.AccountManagerName?.Trim() ?? string.Empty;
+        client.AccountManagerEmail = vm.AccountManagerEmail?.Trim() ?? string.Empty;
+        client.ExecutiveSponsorName = vm.ExecutiveSponsorName?.Trim() ?? string.Empty;
+        client.ExecutiveSponsorEmail = vm.ExecutiveSponsorEmail?.Trim() ?? string.Empty;
+        client.Status = vm.Status;
         await _db.SaveChangesAsync();
 
         return RedirectToAction(nameof(Details), new { id });

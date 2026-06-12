@@ -14,7 +14,49 @@
 </div>
 
 <div class="mb-3">
+    <label asp-for="PrimaryContactName" class="form-label"></label>
+    <input asp-for="PrimaryContactName" class="form-control" />
+    <span asp-validation-for="PrimaryContactName" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PrimaryContactEmail" class="form-label"></label>
+    <input asp-for="PrimaryContactEmail" class="form-control" />
+    <span asp-validation-for="PrimaryContactEmail" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AccountManagerName" class="form-label"></label>
+    <input asp-for="AccountManagerName" class="form-control" />
+    <span asp-validation-for="AccountManagerName" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AccountManagerEmail" class="form-label"></label>
+    <input asp-for="AccountManagerEmail" class="form-control" />
+    <span asp-validation-for="AccountManagerEmail" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ExecutiveSponsorName" class="form-label"></label>
+    <input asp-for="ExecutiveSponsorName" class="form-control" />
+    <span asp-validation-for="ExecutiveSponsorName" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ExecutiveSponsorEmail" class="form-label"></label>
+    <input asp-for="ExecutiveSponsorEmail" class="form-control" />
+    <span asp-validation-for="ExecutiveSponsorEmail" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
     <label asp-for="Type" class="form-label"></label>
     <select asp-for="Type" asp-items="Html.GetEnumSelectList<ClientType>()" class="form-select"></select>
     <span asp-validation-for="Type" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Status" class="form-label"></label>
+    <select asp-for="Status" asp-items="Html.GetEnumSelectList<ClientStatus>()" class="form-select"></select>
+    <span asp-validation-for="Status" class="text-danger small"></span>
 </div>

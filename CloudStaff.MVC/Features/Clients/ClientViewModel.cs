@@ -18,4 +18,14 @@ public class ClientViewModel
     public ClientType Type { get; set; } = ClientType.External;
 
     public int ProjectCount { get; set; }
+
+    public string? PrimaryContactName { get; set; }
+    public string? PrimaryContactEmail { get; set; }
+    public string? AccountManagerName { get; set; }
+    public string? AccountManagerEmail { get; set; }
+    public string? ExecutiveSponsorName { get; set; }
+    public string? ExecutiveSponsorEmail { get; set; }
+
+    [Display(Name = "Status")]
+    public ClientStatus Status { get; set; } = ClientStatus.Active;
 }

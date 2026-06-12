@@ -112,6 +112,13 @@ public class CloudStaffContext : DbContext
             e.HasKey(c => c.Id);
             e.Property(c => c.Name).IsRequired().HasMaxLength(200);
             e.Property(c => c.Description).HasMaxLength(1000);
+            e.Property(c => c.PrimaryContactName).HasMaxLength(200);
+            e.Property(c => c.PrimaryContactEmail).HasMaxLength(200);
+            e.Property(c => c.AccountManagerName).HasMaxLength(200);
+            e.Property(c => c.AccountManagerEmail).HasMaxLength(200);
+            e.Property(c => c.ExecutiveSponsorName).HasMaxLength(200);
+            e.Property(c => c.ExecutiveSponsorEmail).HasMaxLength(200);
+            e.Property(c => c.Status).HasDefaultValue(ClientStatus.Active);
             e.HasMany(c => c.Projects)
              .WithOne(p => p.Client)
              .HasForeignKey(p => p.ClientId)
@@ -124,6 +131,11 @@ public class CloudStaffContext : DbContext
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).IsRequired().HasMaxLength(200);
             e.Property(p => p.Description).HasMaxLength(1000);
+            e.Property(p => p.ProjectManagerName).HasMaxLength(200);
+            e.Property(p => p.ProjectManagerEmail).HasMaxLength(200);
+            e.Property(p => p.StartDate);
+            e.Property(p => p.EndDate);
+            e.Property(p => p.Status).HasDefaultValue(ClientProjectStatus.Active);
         });
 
         modelBuilder.Entity<StaffAllocation>(e =>
